@@ -41,7 +41,10 @@ func main() {
 	serverMux := http.NewServeMux()
 	filepathRoot := ""
 	serverMux.Handle("POST /api/users", http.HandlerFunc(cfg.CreatUserHandler))
+	serverMux.Handle("POST /api/login", http.HandlerFunc(cfg.LoginHandler))
 	serverMux.Handle("POST /api/chirps", http.HandlerFunc(cfg.CreatChirpHandler))
+	serverMux.Handle("GET /api/chirps", http.HandlerFunc(cfg.ListChirpsHandler))
+	serverMux.Handle("GET /api/chirps/{chirpID}", http.HandlerFunc(cfg.GetChirpHandler))
 	serverMux.Handle("GET /admin/metrics", &cfg)
 	serverMux.Handle("/app/", cfg.middleWareInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	serverMux.Handle("POST /admin/reset", http.HandlerFunc(cfg.ResetHandler))

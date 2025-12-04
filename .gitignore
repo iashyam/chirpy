@@ -30,7 +30,8 @@ go.work.sum
 
 #migrations
 migrate*
+curls.txt
 
 # Editor/IDE
 # .idea/
-# .vscode/
+.vscode/

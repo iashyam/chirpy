@@ -50,5 +50,15 @@ type ValidationResponse struct {
 }
 
 type EmailRequest struct {
-	Email string
+	Email string `json:"email"`
+}
+
+type UserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginRequest struct{
+	Email string `json:"email"`
+	Password string `json:"password"`
 }

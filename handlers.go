@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chirpy/internal/auth"
 	"chirpy/internal/database"
 	"context"
 
@@ -30,18 +31,25 @@ func (cfg *apiConfig) middleWareInc(handle http.Handler) http.Handler {
 func (cfg *apiConfig) CreatUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-type", "text/json")
-	email, err := DecodeBody[EmailRequest](r)
+	userRequest, err := DecodeBody[UserRequest](r)
 	ctx := context.Background()
 	if err != nil {
 		RespondWithError(w, 400, "Error decoding body")
 		return
 	}
 
+	hashedPass, err := auth.HashPassword(userRequest.Password)
+	if err != nil {
+		RespondWithError(w, 400, "Error hasing passowrd")
+		return
+	}
+
 	user, err := cfg.db.AddUser(ctx, database.AddUserParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Email:     email.Email,
+		ID:             uuid.New(),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+		Email:          userRequest.Email,
+		HashedPassword: hashedPass,
 	})
 
 	if err != nil {
@@ -49,14 +57,38 @@ func (cfg *apiConfig) CreatUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userNew := User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+	userNew := UserToUserNew(user)
+	RespondWithJson(w, 201, userNew)
+}
+
+func (cfg *apiConfig) LoginHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-type", "text/json")
+	loginRequest, err := DecodeBody[LoginRequest](r)
+	ctx := context.Background()
+	if err != nil {
+		RespondWithError(w, 400, "Error decoding body")
+		return
 	}
 
-	RespondWithJson(w, 201, userNew)
+	user, err := cfg.db.GetUserByEmail(ctx, loginRequest.Email)
+	if err != nil {
+		RespondWithError(w, 400, "Error finding user with that email")
+		return
+	}
+
+	matchPassword, err := auth.CheckPasswordHash(loginRequest.Password, user.HashedPassword)
+	if err != nil {
+		RespondWithError(w, 403, "Incorrect email or password!")
+		return
+	}
+
+	if !matchPassword {
+		RespondWithError(w, 401, "Incorrect email or password!")
+		return
+	}
+
+	RespondWithJson(w, 200, UserToUserNew(user))
 }
 
 func (cfg *apiConfig) CreatChirpHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +104,8 @@ func (cfg *apiConfig) CreatChirpHandler(w http.ResponseWriter, r *http.Request) 
 	err = ValidateBody(*chirpReq)
 
 	if err != nil {
-
 		RespondWithError(w, 400, "Chirp is too long")
+		return
 	}
 
 	chirp, err := cfg.db.CreateChirp(ctx, database.CreateChirpParams{
@@ -98,6 +130,38 @@ func (cfg *apiConfig) CreatChirpHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	RespondWithJson(w, 201, chirpNew)
+}
+
+func (cfg *apiConfig) ListChirpsHandler(w http.ResponseWriter, r *http.Request) {
+
+	listChirps, err := cfg.db.ListChirps(context.Background())
+
+	if err != nil {
+		RespondWithError(w, 400, fmt.Sprintf("Error getting chirps from database: %v\n", err))
+		return
+	}
+
+	RespondWithJson(w, 200, listChirps)
+}
+
+func (cfg *apiConfig) GetChirpHandler(w http.ResponseWriter, r *http.Request) {
+
+	chirpId := r.PathValue("chirpID")
+	log.Printf("chirpid %s", chirpId)
+	chirpUUID, err := uuid.Parse(chirpId)
+	if err != nil {
+		RespondWithError(w, 400, "Wrong uuid")
+		return
+	}
+
+	chirp, err := cfg.db.GetChipByID(context.Background(), chirpUUID)
+
+	if err != nil {
+		RespondWithError(w, 404, fmt.Sprintf("Error getting chirp from database: %v\n", err))
+		return
+	}
+
+	RespondWithJson(w, 200, chirp)
 }
 
 /// admin methods here
