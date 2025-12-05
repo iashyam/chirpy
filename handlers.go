@@ -88,7 +88,21 @@ func (cfg *apiConfig) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RespondWithJson(w, 200, UserToUserNew(user))
+	expiresIN := loginRequest.ExpiresInSeconds
+	if expiresIN == 0 {
+		expiresIN = 3600
+	}
+
+	token, err := auth.MakeJWT(user.ID, cfg.secret_token, time.Duration(expiresIN)*time.Second)
+
+	if err != nil {
+		RespondWithError(w, 400, "Error loggin in")
+		return
+	}
+	retuser := UserToUserNew(user)
+	retuser.Token = token
+
+	RespondWithJson(w, 200, retuser)
 }
 
 func (cfg *apiConfig) CreatChirpHandler(w http.ResponseWriter, r *http.Request) {
@@ -108,11 +122,23 @@ func (cfg *apiConfig) CreatChirpHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		RespondWithError(w, 400, fmt.Sprintf("Error while confirming login: %v", err))
+		return
+	}
+
+	uid, err := auth.ValidateJWT(token, cfg.secret_token)
+	if err != nil {
+		RespondWithError(w, 401, fmt.Sprintf("Unauthorized Action %v", err))
+		return
+	}
+
 	chirp, err := cfg.db.CreateChirp(ctx, database.CreateChirpParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		UserID:    chirpReq.UserID,
+		UserID:    uid,
 		Body:      chirpReq.Body,
 	})
 
@@ -167,8 +193,6 @@ func (cfg *apiConfig) GetChirpHandler(w http.ResponseWriter, r *http.Request) {
 /// admin methods here
 
 func (cfg *apiConfig) ResetHandler(w http.ResponseWriter, r *http.Request) {
-
-	log.Printf("the role is %s\n", cfg.role)
 
 	if cfg.role != "admin" {
 		RespondWithError(w, 403, "forbidden experiment")

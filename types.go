@@ -12,6 +12,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             database.Queries
 	role           string
+	secret_token   string
 }
 
 type User struct {
@@ -19,6 +20,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 type message struct {
@@ -58,7 +60,8 @@ type UserRequest struct {
 	Password string `json:"password"`
 }
 
-type LoginRequest struct{
-	Email string `json:"email"`
-	Password string `json:"password"`
+type LoginRequest struct {
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds int    `json:"expires_in_seconds"`
 }

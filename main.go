@@ -34,6 +34,7 @@ func main() {
 	}
 
 	cfg.role = os.Getenv("PLATFORM")
+	cfg.secret_token = os.Getenv("TOKEN_STRING")
 	dbQueries := database.New(db)
 	cfg.db = *dbQueries
 
