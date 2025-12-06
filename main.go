@@ -35,6 +35,10 @@ func main() {
 
 	cfg.role = os.Getenv("PLATFORM")
 	cfg.secret_token = os.Getenv("TOKEN_STRING")
+
+	polka_key := os.Getenv("POLKA_KEY")
+	cfg.polka_key = polka_key
+
 	dbQueries := database.New(db)
 	cfg.db = *dbQueries
 
@@ -42,10 +46,15 @@ func main() {
 	serverMux := http.NewServeMux()
 	filepathRoot := ""
 	serverMux.Handle("POST /api/users", http.HandlerFunc(cfg.CreatUserHandler))
+	serverMux.Handle("PUT /api/users", http.HandlerFunc(cfg.UpdateUserHandler))
 	serverMux.Handle("POST /api/login", http.HandlerFunc(cfg.LoginHandler))
+	serverMux.Handle("POST /api/refresh", http.HandlerFunc(cfg.RefreshTokenHandler))
+	serverMux.Handle("POST /api/revoke", http.HandlerFunc(cfg.RevokeTokenHandler))
 	serverMux.Handle("POST /api/chirps", http.HandlerFunc(cfg.CreatChirpHandler))
 	serverMux.Handle("GET /api/chirps", http.HandlerFunc(cfg.ListChirpsHandler))
+	serverMux.Handle("POST /api/polka/webhooks", http.HandlerFunc(cfg.UpgradeUserHandler))
 	serverMux.Handle("GET /api/chirps/{chirpID}", http.HandlerFunc(cfg.GetChirpHandler))
+	serverMux.Handle("DELETE /api/chirps/{chirpID}", http.HandlerFunc(cfg.DeleteChirpHandler))
 	serverMux.Handle("GET /admin/metrics", &cfg)
 	serverMux.Handle("/app/", cfg.middleWareInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	serverMux.Handle("POST /admin/reset", http.HandlerFunc(cfg.ResetHandler))

@@ -84,5 +84,6 @@ func UserToUserNew(user database.User) User {
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Is_Red:    user.IsRed.Bool,
 	}
 }

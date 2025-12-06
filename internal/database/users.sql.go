@@ -16,7 +16,7 @@ const addUser = `-- name: AddUser :one
 INSERT INTO users (id, created_at, updated_at, email, hashed_password) VALUES(
     $1, $2, $3, $4, $5
 )
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_red
 `
 
 type AddUserParams struct {
@@ -42,12 +42,13 @@ func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (User, error) 
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsRed,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users WHERE
+SELECT id, created_at, updated_at, email, hashed_password, is_red FROM users WHERE
 email=$1
 `
 
@@ -60,6 +61,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsRed,
 	)
 	return i, err
 }
@@ -70,5 +72,42 @@ DELETE FROM users
 
 func (q *Queries) Reset(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, reset)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET email=$2, hashed_password=$3, updated_at=Now()
+WHERE id=$1
+RETURNING id, created_at, updated_at, email, hashed_password, is_red
+`
+
+type UpdateUserParams struct {
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	HashedPassword string    `json:"hashed_password"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser, arg.ID, arg.Email, arg.HashedPassword)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+		&i.IsRed,
+	)
+	return i, err
+}
+
+const upgradeUser = `-- name: UpgradeUser :exec
+UPDATE users
+SET is_red=true WHERE id=$1
+`
+
+func (q *Queries) UpgradeUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, upgradeUser, id)
 	return err
 }

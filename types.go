@@ -13,14 +13,17 @@ type apiConfig struct {
 	db             database.Queries
 	role           string
 	secret_token   string
+	polka_key      string
 }
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+	Is_Red       bool      `json:"is_chirpy_red"`
 }
 
 type message struct {
@@ -64,4 +67,15 @@ type LoginRequest struct {
 	Email            string `json:"email"`
 	Password         string `json:"password"`
 	ExpiresInSeconds int    `json:"expires_in_seconds"`
+}
+
+type Token struct {
+	Token string `json:"token"`
+}
+
+type UpgradeUserRequest struct {
+	Event string `json:"event"`
+	Data  struct {
+		UserID uuid.UUID `json:"user_id"`
+	} `json:"data"`
 }
