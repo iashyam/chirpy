@@ -254,6 +254,23 @@ func (cfg *apiConfig) ListChirpsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	author := r.URL.Query().Get("author_id")
+
+	if author != "" {
+		author_id, err := uuid.Parse(author)
+		if err != nil {
+			RespondWithError(w, 400, fmt.Sprintf("Error getting chirps from database: %v\n", err))
+			return
+		}
+		listChirps, err = cfg.db.GetAuthorChrips(context.Background(), author_id)
+		if err != nil {
+			RespondWithError(w, 400, fmt.Sprintf("Error getting chirps from database: %v\n", err))
+			return
+		}
+		RespondWithJson(w, 200, listChirps)
+		return
+	}
+
 	RespondWithJson(w, 200, listChirps)
 }
 
